@@ -41,6 +41,6 @@ app.include_router(vote.router)
 @app.get("/")
 async def root():
 
-    return {"message": "we are getting starting!!!!!"}
+    return {"message": "we are getting starting, just say 'go'"}
 
 
