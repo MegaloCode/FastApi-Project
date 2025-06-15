@@ -17,6 +17,7 @@ class PostCreate(PostBase):
     pass
 
 
+
 class UserOut(BaseModel):
 
     id: int
@@ -43,6 +44,17 @@ class Post(PostBase):
     class Config:
 
         from_attributes = True 
+
+
+class PostOut(BaseModel):
+    id: int
+    title: str
+    content: str
+    published: bool
+    votes: int  
+    
+    class Config:
+        from_attributes = True
 
 
 class UserCreate(BaseModel):

@@ -1,4 +1,4 @@
-from fastapi import FastAPI , APIRouter
+from fastapi import FastAPI , APIRouter 
 from . import models
 from .database import engine 
 from .routers import post , user , auth , vote
@@ -12,6 +12,8 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 
 origins= ["https://www.google.com" , "https://www.youtube.com"]
+
+
 
 app.add_middleware(
 
@@ -27,6 +29,8 @@ app.add_middleware(
 
     )
 
+
+
 router = APIRouter()
 
 app.include_router(post.router)
@@ -38,9 +42,10 @@ app.include_router(auth.router)
 app.include_router(vote.router)
 
 
+
 @app.get("/")
 async def root():
 
-    return {"message": "we are getting starting, just say 'go'"}
+    return {"message": "we are getting starting, hello world"}
 
 

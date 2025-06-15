@@ -13,7 +13,7 @@ router = APIRouter(
 # return all posts
 # @router.get("/" ,response_model=list[schemas.Post]) # import list from typing module to convert response model to list
 @router.get("/" , response_model=list[schemas.PostWithVotes]) # import list from typing module to convert response model to list
-def get_posts(db: Session = Depends(get_db), limit: int = 10 , skip: int = 0 , search: Optional[str] = ""): # db: Session = Depends(get_db) ==> path operation function
+def get_posts(db: Session = Depends(get_db),current_user: int = Depends(oauth2.get_current_user), limit: int = 10 , skip: int = 0 , search: Optional[str] = ""): # db: Session = Depends(get_db) ==> path operation function
 
     # posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
 
@@ -55,32 +55,68 @@ def get_posts(db: Session = Depends(get_db) , current_user: int = Depends(oauth2
 
     return posts_with_votes
 
+# this is the modified code to deal with None type data when unpacking it while testing  (chat-gpt) ==> it's working
+@router.get("/{id}", response_model=schemas.PostWithVotes)  # {id} ==> path parameter
+def get_post(id: int, db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
 
+    # ✅ [Fix] Assign result to a single variable first instead of unpacking
+    result = (
+        db.query(models.Post, func.count(models.Vote.post_id).label("votes"))
+        .join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True)
+        .group_by(models.Post.id)
+        .filter(models.Post.id == id)
+        .first()
+    )
 
-@router.get("/{id}" , response_model=schemas.PostWithVotes) # {id} ==> path parameter
-def get_post(id: int , db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+    # ✅ [Fix] Check if result is None before unpacking
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Post with id: {id} was not found"
+        )
 
-    # find a post with id either it belongs to user or not
-    # post = db.query(models.Post).filter(models.Post.id == id).first()
+    # ✅ [Fix] Unpack only after checking result is not None
+    post, votes = result
 
-    post , votes = db.query(models.Post , func.count(models.Vote.post_id).label("votes")).join(models.Vote , models.Vote.post_id == models.Post.id , isouter=True).group_by(models.Post.id).filter(models.Post.id == id).first()
-
-
-    if not post:
-
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND , detail=f"post with id: {id} was not found")
-    
     if post.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to perform the requested action"
+        )
 
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN , detail="not authorized to perform the requested action")
-    
-    # Convert SQLAlchemy model to dict and add votes
+    # ✅ [Optional] Clean up SQLAlchemy internal state before returning
     post_dict = {**post.__dict__}
     post_dict.pop('_sa_instance_state', None)  # Remove SQLAlchemy internal field
     post_dict['votes'] = votes
 
     return post_dict
 
+
+#######################################################################################################################
+# @router.get("/{id}" , response_model=schemas.PostWithVotes) # {id} ==> path parameter
+# def get_post(id: int , db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
+
+#     # find a post with id either it belongs to user or not
+#     # post = db.query(models.Post).filter(models.Post.id == id).first()
+
+#     post , votes = db.query(models.Post , func.count(models.Vote.post_id).label("votes")).join(models.Vote , models.Vote.post_id == models.Post.id , isouter=True).group_by(models.Post.id).filter(models.Post.id == id).first()
+
+
+#     if not post:
+
+#         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND , detail=f"post with id: {id} was not found")
+    
+#     if post.owner_id != current_user.id:
+
+#         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN , detail="not authorized to perform the requested action")
+    
+#     # Convert SQLAlchemy model to dict and add votes
+#     post_dict = {**post.__dict__}
+#     post_dict.pop('_sa_instance_state', None)  # Remove SQLAlchemy internal field
+#     post_dict['votes'] = votes
+
+#     return post_dict
+########################################################################################################################
 
 
 @router.post("/" , status_code=status.HTTP_201_CREATED , response_model=schemas.Post)

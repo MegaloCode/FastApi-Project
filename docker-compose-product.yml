@@ -1,0 +1,24 @@
+# version: "3"
+
+services:
+  api:
+    build: "." # this line used only in production env ==> image: megalobox/fastapi
+    depends_on:
+      - postgres
+    ports:
+     - "8000:8000"
+    env_file:
+      - ./.env  # or printing all the environment variables
+    volumes:
+      - ./:/usr/src/app:ro
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: megalobox1997
+      POSTGRES_DB: fastapi            
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+
+volumes:
+  postgres-db:
