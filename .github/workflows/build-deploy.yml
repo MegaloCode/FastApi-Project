@@ -29,9 +29,6 @@ jobs:
 
       - name: install all dependencies
         run: pip install -r requirements.txt
-      
-      - name: install test dependencies
-        run: pip install httpx
 
       - name: test with pytest
         run: |
